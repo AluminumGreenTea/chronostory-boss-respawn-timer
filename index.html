@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>楓之谷 · 怪物重生計時器</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <!-- 頁首 -->
+      <header class="app-header">
+        <div class="logo-mark">
+          <svg
+            class="icon"
+            viewBox="0 0 24 24"
+            width="24"
+            height="24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <line x1="10" y1="2" x2="14" y2="2" />
+            <line x1="12" y1="14" x2="15" y2="11" />
+            <circle cx="12" cy="14" r="8" />
+          </svg>
+        </div>
+        <div class="title-block">
+          <h1>
+            <span data-i18n="app.title">重生計時器</span
+            ><span
+              class="info-tip"
+              tabindex="0"
+              role="img"
+              data-i18n-aria="app.desc"
+              aria-label="依頻道追蹤每一隻 BOSS 的重生時間"
+              ><svg
+                class="icon"
+                viewBox="0 0 24 24"
+                width="15"
+                height="15"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 16v-4" />
+                <path d="M12 8h.01" /></svg
+              ><span class="tip-bubble" aria-hidden="true" data-i18n="app.desc"
+                >依頻道追蹤每一隻 BOSS 的重生時間</span
+              ></span
+            >
+          </h1>
+        </div>
+        <div class="header-tools">
+          <button
+            id="add-btn"
+            class="bell"
+            type="button"
+            data-i18n-title="tool.add"
+            data-i18n-aria="tool.add"
+            title="新增計時器"
+            aria-label="新增計時器"
+          >
+            <svg
+              class="icon"
+              viewBox="0 0 24 24"
+              width="18"
+              height="18"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M5 12h14" />
+              <path d="M12 5v14" />
+            </svg>
+          </button>
+          <button
+            id="clear-btn"
+            class="bell"
+            type="button"
+            data-i18n-title="tool.clear"
+            data-i18n-aria="tool.clear"
+            title="清除全部"
+            aria-label="清除全部"
+          >
+            <svg
+              class="icon"
+              viewBox="0 0 24 24"
+              width="18"
+              height="18"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M18.5 5.5 11 13" />
+              <path d="M9.5 11.5 12.5 14.5" />
+              <path d="M11 13 5 19l2.5 2.5L13.5 15.5Z" />
+              <path d="M7 17l2.5 2.5" />
+            </svg>
+          </button>
+          <button
+            id="lang-toggle"
+            class="bell bell-text"
+            type="button"
+            title="切換語言（中 / EN）"
+            aria-label="切換語言（中 / EN）"
+          >
+            EN
+          </button>
+          <button
+            id="theme-toggle"
+            class="bell"
+            type="button"
+            title="切換深色 / 淺色"
+            aria-label="切換深色 / 淺色"
+          ></button>
+          <button
+            id="sound-toggle"
+            class="bell"
+            type="button"
+            title="提示音開關"
+            aria-label="提示音開關"
+          ></button>
+        </div>
+      </header>
+
+      <!-- 工具列（捲動時吸頂） -->
+      <div class="controls">
+        <div class="toolbar">
+          <div class="search-wrap">
+            <span class="search-icon" aria-hidden="true"
+              ><svg
+                class="icon"
+                viewBox="0 0 24 24"
+                width="18"
+                height="18"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.3-4.3" /></svg
+            ></span>
+            <input
+              id="search-input"
+              class="search-input"
+              type="search"
+              data-i18n-ph="search.ph"
+              data-i18n-aria="search.aria"
+              placeholder="搜尋名稱、備註或頻道…"
+              aria-label="搜尋計時器"
+            />
+          </div>
+          <div id="summary" class="summary hidden"></div>
+        </div>
+
+        <!-- 篩選列（種類 ≥ 2 才出現） -->
+        <div id="filter-bar" class="filter-bar hidden"></div>
+      </div>
+
+      <!-- 空狀態 -->
+      <div id="empty-state" class="empty-state">
+        <div class="big">
+          <svg
+            class="icon"
+            viewBox="0 0 24 24"
+            width="44"
+            height="44"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <line x1="10" y1="2" x2="14" y2="2" />
+            <line x1="12" y1="14" x2="15" y2="11" />
+            <circle cx="12" cy="14" r="8" />
+          </svg>
+        </div>
+        <p data-i18n="empty.title">還沒有任何計時器</p>
+        <p class="hint" data-i18n="empty.hint">
+          點「＋ 新增計時器」，選好怪物與頻道就會立即開始倒數。
+        </p>
+      </div>
+
+      <!-- 無搜尋結果 -->
+      <div id="no-results" class="no-results hidden">
+        <div class="big">
+          <svg
+            class="icon"
+            viewBox="0 0 24 24"
+            width="44"
+            height="44"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.3-4.3" />
+          </svg>
+        </div>
+        <p data-i18n="noresult.title">找不到符合條件的計時器</p>
+        <p class="hint" data-i18n="noresult.hint">
+          試試其他關鍵字，或清空搜尋欄。
+        </p>
+      </div>
+
+      <!-- 卡片格 -->
+      <div id="records-grid" class="grid"></div>
+    </div>
+
+    <!-- 螢幕報讀專用（視覺隱藏） -->
+    <div
+      id="live-region"
+      class="sr-only"
+      aria-live="polite"
+      aria-atomic="true"
+    ></div>
+
+    <!-- 提示 Toast 容器 -->
+    <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+    <!-- 新增 / 編輯彈窗 -->
+    <div
+      id="modal"
+      class="modal"
+      aria-hidden="true"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
+    >
+      <div class="modal-card">
+        <div class="modal-head">
+          <h2 id="modal-title">新增計時器</h2>
+        </div>
+        <div class="modal-body">
+          <!-- 圖示：怪物 or 自訂 -->
+          <div class="field">
+            <label data-i18n="field.icon">選擇圖示</label>
+            <div class="mode-tabs">
+              <button
+                type="button"
+                class="mode-tab active"
+                data-mode="monster"
+                data-i18n="mode.monster"
+              >
+                怪物圖片
+              </button>
+              <button
+                type="button"
+                class="mode-tab"
+                data-mode="custom"
+                data-i18n="mode.custom"
+              >
+                自訂圖示
+              </button>
+            </div>
+
+            <div id="mode-monster" class="mode-panel">
+              <div id="monster-grid" class="monster-grid"></div>
+            </div>
+
+            <div id="mode-custom" class="mode-panel hidden">
+              <label
+                class="sub"
+                style="margin-bottom: 6px; display: block"
+                data-i18n="field.symbol"
+                >符號（10 選 1）</label
+              >
+              <div id="symbol-grid" class="symbol-grid"></div>
+              <label
+                class="sub"
+                style="margin-bottom: 6px; display: block"
+                data-i18n="field.color"
+                >顏色（8 選 1）</label
+              >
+              <div id="color-grid" class="color-grid"></div>
+              <label
+                class="sub"
+                style="margin-bottom: 6px; display: block"
+                data-i18n="field.note"
+                >備註標籤（選填）</label
+              >
+              <input
+                id="label-input"
+                class="input"
+                type="text"
+                maxlength="12"
+                data-i18n-ph="note.ph"
+                placeholder="例如：紅王、東洞…"
+              />
+            </div>
+          </div>
+
+          <!-- 頻道 -->
+          <div class="field">
+            <label
+              ><span data-i18n="field.channel">頻道</span>
+              <span class="sub" data-i18n="channel.sub"
+                >一筆 = 一個頻道；多頻道請各自新增</span
+              ></label
+            >
+            <input
+              id="channel-input"
+              class="input"
+              type="number"
+              min="1"
+              step="1"
+              inputmode="numeric"
+              data-i18n-ph="channel.ph"
+              placeholder="輸入頻道數字，例如 3"
+            />
+          </div>
+
+          <!-- 重生間隔 -->
+          <div class="field">
+            <label
+              ><span data-i18n="field.interval">重生間隔</span>
+              <span class="sub" data-i18n="interval.sub">需大於 0</span></label
+            >
+            <div class="interval-row">
+              <div class="col">
+                <small data-i18n="interval.hours">小時</small>
+                <input
+                  id="hours-input"
+                  class="input"
+                  type="number"
+                  min="0"
+                  step="1"
+                  inputmode="numeric"
+                  placeholder="0"
+                />
+              </div>
+              <div class="col">
+                <small data-i18n="interval.minutes">分鐘</small>
+                <input
+                  id="minutes-input"
+                  class="input"
+                  type="number"
+                  min="0"
+                  max="59"
+                  step="1"
+                  inputmode="numeric"
+                  placeholder="30"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div id="form-error" class="form-error"></div>
+
+          <div class="modal-actions">
+            <button
+              id="cancel-btn"
+              type="button"
+              class="btn btn-cancel"
+              data-i18n="btn.cancel"
+            >
+              取消
+            </button>
+            <button
+              id="submit-btn"
+              type="button"
+              class="btn btn-submit"
+              data-i18n="btn.submit"
+            >
+              建立並開始倒數
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 分離模組：依相依順序載入 -->
+    <script src="js/theme.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/i18n.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/sound.js"></script>
+    <script src="js/timer.js"></script>
+    <script src="js/toast.js"></script>
+    <script src="js/icons.js"></script>
+    <script src="js/render.js"></script>
+    <script src="js/app.js"></script>
+  </body>
+</html>
