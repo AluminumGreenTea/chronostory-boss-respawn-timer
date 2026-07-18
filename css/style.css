@@ -113,9 +113,9 @@ body::before {
 
 .wrap {
   position: relative;
-  max-width: 1120px;
-  margin: 0 auto;
-  padding: 22px 16px 70px;
+  max-width: none;          /* 整體頁面滿版寬度 */
+  margin: 0;
+  padding: 0 16px 70px;
   transition: opacity .12s ease;
 }
 
@@ -124,7 +124,7 @@ body::before {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .logo-mark {
@@ -213,18 +213,20 @@ body::before {
 }
 
 /* ---------------- 吸頂控制列 ---------------- */
-.controls {
+/* 頁首 + 工具列一起吸頂 */
+.topbar {
   position: sticky;
   top: 0;
-  z-index: 20;
-  margin: 0 -16px 16px;
-  padding: 10px 16px 8px;
+  z-index: 30;
+  margin: 0 -16px 14px;
+  padding: 14px 16px 10px;
   background: linear-gradient(180deg,
-    color-mix(in srgb, var(--bg-mid) 92%, transparent),
-    color-mix(in srgb, var(--bg-mid) 60%, transparent) 72%,
-    transparent);
+    color-mix(in srgb, var(--bg-top) 96%, transparent) 0%,
+    color-mix(in srgb, var(--bg-top) 92%, transparent) 85%,
+    color-mix(in srgb, var(--bg-top) 62%, transparent) 100%);
   backdrop-filter: blur(10px);
 }
+.controls { margin: 0; padding: 0; }
 
 .toolbar {
   display: flex;
@@ -341,8 +343,9 @@ body::before {
 /* ---------------- 卡片格 ---------------- */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(244px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(288px, 1fr));
+  gap: 8px;
+  margin-inline: 5%;        /* 卡片區左右各縮 5%（共 10%） */
 }
 
 .empty-state,
@@ -374,8 +377,8 @@ body::before {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 14px 14px 16px 36%;   /* 左側讓給全高圖像 */
+  gap: 6px;
+  padding: 10px 14px 12px 34%;   /* 左側讓給全高圖像；上下收緊讓卡片區域更小 */
   border-radius: var(--radius);
   background: var(--surface);
   border: 1px solid var(--line-faint);
@@ -949,4 +952,23 @@ button:focus-visible,
 /* 極窄畫面才單欄 */
 @media (max-width: 360px) {
   .grid { grid-template-columns: 1fr; }
+}
+
+/* ---------------- Full HD 以上：卡片放大約 125%，較舒適 ---------------- */
+@media (min-width: 1600px) {
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 10px;
+  }
+  .card { padding: 13px 18px 15px 34%; gap: 8px; }
+  .card-dial { width: 118px; height: 118px; }
+  .dial-center { padding: 0 11px; gap: 4px; }
+  .card-name { font-size: .92rem; }
+  .card-countdown { font-size: 1.25rem; }
+  .card-media-glyph { font-size: 3.2rem; }
+  .ch-tag { font-size: .78rem; top: 10px; right: 10px; }
+  .btn-kill,
+  .btn-icon { width: 35px; height: 35px; }
+  .card-actions { gap: 8px; }
+  .card-actions svg { width: 20px; height: 20px; }   /* 蓋掉 inline 尺寸，圖示一起放大 */
 }

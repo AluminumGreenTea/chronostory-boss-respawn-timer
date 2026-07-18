@@ -254,11 +254,15 @@
   function onCopy(id) {
     const src = records.find(x => x.id === id);
     if (!src) return;
-    // 複製一張新卡：頻道 +1（方便追下一個頻道），重新開始倒數
+    // 複製一張新卡：以「同種類目前最大的頻道號碼 + 1」為新頻道（非母體 +1）
+    const key = MapleTimer.typeKey(src);
+    const maxCh = records.reduce((mx, r) =>
+      (MapleTimer.typeKey(r) === key && Number.isFinite(r.channel)) ? Math.max(mx, r.channel) : mx,
+      0);
     const copy = {
       ...src,
       id: uid(),
-      channel: Number.isFinite(src.channel) ? src.channel + 1 : src.channel,
+      channel: Number.isFinite(src.channel) ? maxCh + 1 : src.channel,
       startTime: Date.now(),
     };
     const idx = records.findIndex(x => x.id === id);
