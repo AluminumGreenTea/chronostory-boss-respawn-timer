@@ -60,6 +60,8 @@
   --radius: 12px;
   --radius-sm: 9px;
   --radius-pill: 999px;
+
+  --drawer-w: min(360px, 90vw);   /* 頻道總覽側邊抽屜寬度 */
 }
 
 /* 淺色主題：暖調大地色（奶油／米棕底，赭土跳色，深棕文字） */
@@ -426,7 +428,7 @@ body::before {
   display: flex;
   flex-direction: column;
   overflow: hidden; /* 外層不捲動 */
-  transition: opacity 0.12s ease;
+  transition: opacity 0.12s ease, padding 0.24s ease;
 }
 
 /* 卡片區：延續到底部，隱藏捲軸 */
@@ -1129,6 +1131,49 @@ body::before {
   animation: modal-pop 0.26s cubic-bezier(0.2, 0.7, 0.3, 1.1) both;
 }
 
+/* 頻道總覽：靠右「推擠式」側邊抽屜（不遮蓋、擠壓卡片區，兩邊同時可見） */
+#channels-modal {
+  position: fixed;
+  top: 0; right: 0; bottom: 0; left: auto;
+  width: var(--drawer-w);
+  display: block;              /* 蓋掉 .modal 的 none/flex，永遠在版面上 */
+  padding: 0;
+  background: none;            /* 無遮罩，看得到卡片 */
+  backdrop-filter: none;
+  transform: translateX(101%); /* 收合時滑出畫面右側 */
+  transition: transform 0.24s ease;
+  animation: none;             /* 蓋掉 .modal.open 的 fade-in */
+  z-index: 45;
+  overflow: visible;
+}
+#channels-modal.open { transform: none; }
+#channels-modal .modal-card {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  margin: 0;
+  border-radius: var(--radius) 0 0 var(--radius);
+  box-shadow: -14px 0 40px rgba(0, 0, 0, 0.28);
+  display: flex;
+  flex-direction: column;
+  animation: none;
+}
+#channels-modal .modal-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+#channels-modal .channels-list {
+  flex: 1 1 auto;
+  max-height: none; /* 改用抽屜高度捲動 */
+}
+
+/* 抽屜開啟時，擠壓主內容（卡片區跟著變窄、重排欄數） */
+html.drawer-open .wrap {
+  padding-right: calc(16px + var(--drawer-w));
+}
+
 .modal-head {
   padding: 16px 20px;
   border-bottom: 1px solid var(--line);
@@ -1424,6 +1469,68 @@ body::before {
 }
 .btn-submit:hover {
   box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* ---------------- 頻道總覽 ---------------- */
+.channels-summary {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-soft);
+  margin-bottom: 12px;
+}
+.channels-empty {
+  color: var(--text-dim);
+  text-align: center;
+  padding: 20px 0;
+}
+.channels-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 56vh;
+  overflow-y: auto;
+  margin-bottom: 14px;
+}
+.ch-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--line-faint);
+}
+.ch-group-name {
+  flex: 0 0 34%;
+  min-width: 0;
+  font-weight: 600;
+  font-size: 0.86rem;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ch-chips {
+  flex: 1 1 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ch-chip {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.74rem;
+  padding: 3px 9px;
+  border-radius: var(--radius-sm);
+  color: var(--text-soft);
+  background: var(--surface-2);
+}
+.ch-chip.is-ready {
+  color: var(--accent-ink);
+  background: var(--accent);
+}
+.ch-chip.is-dup {
+  color: #fff;
+  background: var(--danger);
+  box-shadow: 0 0 0 2px var(--danger-soft);
 }
 
 /* ---------------- SVG 圖示 ---------------- */

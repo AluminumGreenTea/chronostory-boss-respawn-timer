@@ -76,6 +76,20 @@ const STRINGS = {
     zh: "重生間隔需大於 0。",
     en: "Respawn interval must be greater than 0.",
   },
+  "err.dupChannel": {
+    zh: "這隻 BOSS 的 CH{n} 已經在計時了。",
+    en: "CH{n} for this boss is already running.",
+  },
+
+  "tool.channels": { zh: "頻道總覽", en: "Channel overview" },
+  "channels.title": { zh: "頻道總覽", en: "Channels in use" },
+  "channels.summary": {
+    zh: "{boss} 隻 BOSS · {ch} 個頻道在計時",
+    en: "{boss} bosses · {ch} channels running",
+  },
+  "channels.empty": { zh: "目前沒有計時器。", en: "No timers yet." },
+  "channels.dupTip": { zh: "重複頻道", en: "Duplicate channel" },
+  "channels.ready": { zh: "可重生", en: "Ready" },
 
   "card.remaining": { zh: "剩餘時間", en: "Time left" },
   "card.reset": { zh: "重置", en: "Reset" },

@@ -214,6 +214,12 @@ const Render = {
     main.appendChild(body);
     card.appendChild(main);
 
+    // 快取動態節點，tick 更新時直接取用（免每次 querySelector）
+    card._countdown = countdown;
+    card._pct = pct;
+    card._ring = gauge.querySelector('.ring-progress');
+    card._ch = ch;
+
     // 底部：整條分格操作列（圖示 + 文字）
     const actions = document.createElement('div');
     actions.className = 'card-actions';
@@ -240,22 +246,52 @@ const Render = {
     return card;
   },
 
-  /* ---- 每次 tick 更新卡片的動態部分 ---- */
+  /* ---- 每次 tick 更新卡片的動態部分（用快取節點 + 只在文字改變時才寫 DOM） ---- */
   updateCard(card, record, state) {
     card.classList.toggle('is-ready', state.ready);
     card.classList.toggle('is-urgent', !!state.urgent);
     card.classList.toggle('is-overdue-long', !!state.overdueLong);
 
-    const ring = card.querySelector('.ring-progress');
-    if (ring) ring.style.strokeDashoffset = String(GAUGE_LEN * (1 - state.progress));
-    const pct = card.querySelector('.card-pct');
-    if (pct) pct.textContent = Math.round(state.progress * 100) + '%';
-
+    const ring = card._ring || (card._ring = card.querySelector('.ring-progress'));
+    if (ring) {
+      const off = String(GAUGE_LEN * (1 - state.progress));
+      if (ring._off !== off) { ring.style.strokeDashoffset = off; ring._off = off; }
+    }
+    const pct = card._pct || (card._pct = card.querySelector('.card-pct'));
+    if (pct) {
+      const t = Math.round(state.progress * 100) + '%';
+      if (pct.textContent !== t) pct.textContent = t;
+    }
     // 時間到了直接顯示負數，不再另外顯示文字
-    const countdown = card.querySelector('.card-countdown');
-    if (countdown) countdown.textContent = state.ready
-      ? '-' + MapleTimer.formatDuration(state.overdue)
-      : MapleTimer.formatDuration(state.remaining);
+    const countdown = card._countdown || (card._countdown = card.querySelector('.card-countdown'));
+    if (countdown) {
+      const t = state.ready
+        ? '-' + MapleTimer.formatDuration(state.overdue)
+        : MapleTimer.formatDuration(state.remaining);
+      if (countdown.textContent !== t) countdown.textContent = t;
+    }
+    // 頻道標籤：非編輯中才同步（涵蓋方向鍵 / 編輯 / 複製造成的頻道變動）
+    const ch = card._ch;
+    if (ch && !ch.querySelector('input')) {
+      const t = `CH ${record.channel}`;
+      if (ch.textContent !== t) {
+        ch.textContent = t;
+        ch.setAttribute('aria-label', MapleI18n.t('ch.aria', { n: record.channel }));
+      }
+    }
+  },
+
+  /* ---- 只換配色（主題切換用）：更新 --card-color 與半圓漸層，不重建卡片 ---- */
+  recolorCard(card, record) {
+    const cc = this.cardColor(record);
+    card.style.setProperty('--card-color', cc);
+    const stops = card.querySelectorAll('.card-gauge stop');
+    if (stops.length >= 3) {
+      const light = this.mixHex(cc, '#ffffff', 0.55);
+      stops[0].setAttribute('stop-color', light);
+      stops[1].setAttribute('stop-color', cc);
+      stops[2].setAttribute('stop-color', light);
+    }
   },
 
   /* ---- 篩選列（種類 ≥ 2 才顯示） ---- */

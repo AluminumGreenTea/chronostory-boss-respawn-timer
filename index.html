@@ -11,130 +11,61 @@
       href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&family=Roboto+Mono:wght@500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="css/style.css?v=20" />
   </head>
   <body>
     <div class="wrap">
       <!-- 頁首 + 工具列：捲動時一起吸頂 -->
       <div class="topbar">
-      <!-- 頁首 -->
-      <header class="app-header">
-        <div class="logo-mark">
-          <img id="logo-img" alt="" aria-hidden="true" />
-        </div>
-        <div class="title-block">
-          <h1>
-            <span data-i18n="app.title">重生計時器</span
-            ><span
-              class="info-tip"
-              tabindex="0"
-              role="img"
-              data-i18n-aria="app.desc"
-              aria-label="依頻道追蹤每一隻 BOSS 的重生時間"
-              ><svg
-                class="icon"
-                viewBox="0 0 24 24"
-                width="15"
-                height="15"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
+        <!-- 頁首 -->
+        <header class="app-header">
+          <div class="logo-mark">
+            <img id="logo-img" alt="" aria-hidden="true" />
+          </div>
+          <div class="title-block">
+            <h1>
+              <span data-i18n="app.title">重生計時器</span
+              ><span
+                class="info-tip"
+                tabindex="0"
+                role="img"
+                data-i18n-aria="app.desc"
+                aria-label="依頻道追蹤每一隻 BOSS 的重生時間"
+                ><svg
+                  class="icon"
+                  viewBox="0 0 24 24"
+                  width="15"
+                  height="15"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 16v-4" />
+                  <path d="M12 8h.01" /></svg
+                ><span
+                  class="tip-bubble"
+                  aria-hidden="true"
+                  data-i18n="app.desc"
+                  >依頻道追蹤每一隻 BOSS 的重生時間</span
+                ></span
               >
-                <circle cx="12" cy="12" r="10" />
-                <path d="M12 16v-4" />
-                <path d="M12 8h.01" /></svg
-              ><span class="tip-bubble" aria-hidden="true" data-i18n="app.desc"
-                >依頻道追蹤每一隻 BOSS 的重生時間</span
-              ></span
+            </h1>
+            <span class="app-subtitle">Chronostory Boss Respawn Timer</span>
+          </div>
+          <div class="header-tools">
+            <button
+              id="add-btn"
+              class="bell"
+              type="button"
+              data-i18n-title="tool.add"
+              data-i18n-aria="tool.add"
+              title="新增計時器"
+              aria-label="新增計時器"
             >
-          </h1>
-          <span class="app-subtitle">MapleStory Boss Respawn Timer</span>
-        </div>
-        <div class="header-tools">
-          <button
-            id="add-btn"
-            class="bell"
-            type="button"
-            data-i18n-title="tool.add"
-            data-i18n-aria="tool.add"
-            title="新增計時器"
-            aria-label="新增計時器"
-          >
-            <svg
-              class="icon"
-              viewBox="0 0 24 24"
-              width="18"
-              height="18"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path d="M5 12h14" />
-              <path d="M12 5v14" />
-            </svg>
-          </button>
-          <button
-            id="clear-btn"
-            class="bell"
-            type="button"
-            data-i18n-title="tool.clear"
-            data-i18n-aria="tool.clear"
-            title="清除全部"
-            aria-label="清除全部"
-          >
-            <svg
-              class="icon"
-              viewBox="0 0 24 24"
-              width="18"
-              height="18"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path d="M18.5 5.5 11 13" />
-              <path d="M9.5 11.5 12.5 14.5" />
-              <path d="M11 13 5 19l2.5 2.5L13.5 15.5Z" />
-              <path d="M7 17l2.5 2.5" />
-            </svg>
-          </button>
-          <button
-            id="lang-toggle"
-            class="bell bell-text"
-            type="button"
-            title="切換語言（中 / EN）"
-            aria-label="切換語言（中 / EN）"
-          >
-            EN
-          </button>
-          <button
-            id="theme-toggle"
-            class="bell"
-            type="button"
-            title="切換深色 / 淺色"
-            aria-label="切換深色 / 淺色"
-          ></button>
-          <button
-            id="sound-toggle"
-            class="bell"
-            type="button"
-            title="提示音開關"
-            aria-label="提示音開關"
-          ></button>
-        </div>
-      </header>
-
-      <!-- 工具列（捲動時吸頂） -->
-      <div class="controls">
-        <div class="toolbar">
-          <div class="search-wrap">
-            <span class="search-icon" aria-hidden="true"
-              ><svg
+              <svg
                 class="icon"
                 viewBox="0 0 24 24"
                 width="18"
@@ -145,81 +76,181 @@
                 stroke-linecap="round"
                 stroke-linejoin="round"
               >
-                <circle cx="11" cy="11" r="8" />
-                <path d="m21 21-4.3-4.3" /></svg
-            ></span>
-            <input
-              id="search-input"
-              class="search-input"
-              type="search"
-              data-i18n-ph="search.ph"
-              data-i18n-aria="search.aria"
-              placeholder="搜尋名稱、備註或頻道…"
-              aria-label="搜尋計時器"
-            />
+                <path d="M5 12h14" />
+                <path d="M12 5v14" />
+              </svg>
+            </button>
+            <button
+              id="clear-btn"
+              class="bell"
+              type="button"
+              data-i18n-title="tool.clear"
+              data-i18n-aria="tool.clear"
+              title="清除全部"
+              aria-label="清除全部"
+            >
+              <svg
+                class="icon"
+                viewBox="0 0 24 24"
+                width="18"
+                height="18"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M18.5 5.5 11 13" />
+                <path d="M9.5 11.5 12.5 14.5" />
+                <path d="M11 13 5 19l2.5 2.5L13.5 15.5Z" />
+                <path d="M7 17l2.5 2.5" />
+              </svg>
+            </button>
+            <button
+              id="channels-btn"
+              class="bell"
+              type="button"
+              data-i18n-title="tool.channels"
+              data-i18n-aria="tool.channels"
+              title="頻道總覽"
+              aria-label="頻道總覽"
+            >
+              <svg
+                class="icon"
+                viewBox="0 0 24 24"
+                width="18"
+                height="18"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="8" y1="6" x2="21" y2="6" />
+                <line x1="8" y1="12" x2="21" y2="12" />
+                <line x1="8" y1="18" x2="21" y2="18" />
+                <line x1="3" y1="6" x2="3.01" y2="6" />
+                <line x1="3" y1="12" x2="3.01" y2="12" />
+                <line x1="3" y1="18" x2="3.01" y2="18" />
+              </svg>
+            </button>
+            <button
+              id="lang-toggle"
+              class="bell bell-text"
+              type="button"
+              title="切換語言（中 / EN）"
+              aria-label="切換語言（中 / EN）"
+            >
+              EN
+            </button>
+            <button
+              id="theme-toggle"
+              class="bell"
+              type="button"
+              title="切換深色 / 淺色"
+              aria-label="切換深色 / 淺色"
+            ></button>
+            <button
+              id="sound-toggle"
+              class="bell"
+              type="button"
+              title="提示音開關"
+              aria-label="提示音開關"
+            ></button>
           </div>
-          <div id="summary" class="summary hidden"></div>
-        </div>
+        </header>
 
-        <!-- 篩選列（種類 ≥ 2 才出現） -->
-        <div id="filter-bar" class="filter-bar hidden"></div>
-      </div>
+        <!-- 工具列（捲動時吸頂） -->
+        <div class="controls">
+          <div class="toolbar">
+            <div class="search-wrap">
+              <span class="search-icon" aria-hidden="true"
+                ><svg
+                  class="icon"
+                  viewBox="0 0 24 24"
+                  width="18"
+                  height="18"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="m21 21-4.3-4.3" /></svg
+              ></span>
+              <input
+                id="search-input"
+                class="search-input"
+                type="search"
+                data-i18n-ph="search.ph"
+                data-i18n-aria="search.aria"
+                placeholder="搜尋名稱、備註或頻道…"
+                aria-label="搜尋計時器"
+              />
+            </div>
+            <div id="summary" class="summary hidden"></div>
+          </div>
+
+          <!-- 篩選列（種類 ≥ 2 才出現） -->
+          <div id="filter-bar" class="filter-bar hidden"></div>
+        </div>
       </div>
       <!-- /topbar -->
 
       <!-- 只有這一區會捲動 -->
       <main id="scroll-area" class="scroll-area">
-      <!-- 空狀態 -->
-      <div id="empty-state" class="empty-state">
-        <div class="big">
-          <svg
-            class="icon"
-            viewBox="0 0 24 24"
-            width="44"
-            height="44"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <line x1="10" y1="2" x2="14" y2="2" />
-            <line x1="12" y1="14" x2="15" y2="11" />
-            <circle cx="12" cy="14" r="8" />
-          </svg>
+        <!-- 空狀態 -->
+        <div id="empty-state" class="empty-state">
+          <div class="big">
+            <svg
+              class="icon"
+              viewBox="0 0 24 24"
+              width="44"
+              height="44"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="10" y1="2" x2="14" y2="2" />
+              <line x1="12" y1="14" x2="15" y2="11" />
+              <circle cx="12" cy="14" r="8" />
+            </svg>
+          </div>
+          <p data-i18n="empty.title">還沒有任何計時器</p>
+          <p class="hint" data-i18n="empty.hint">
+            點「＋ 新增計時器」，選好怪物與頻道就會立即開始倒數。
+          </p>
         </div>
-        <p data-i18n="empty.title">還沒有任何計時器</p>
-        <p class="hint" data-i18n="empty.hint">
-          點「＋ 新增計時器」，選好怪物與頻道就會立即開始倒數。
-        </p>
-      </div>
 
-      <!-- 無搜尋結果 -->
-      <div id="no-results" class="no-results hidden">
-        <div class="big">
-          <svg
-            class="icon"
-            viewBox="0 0 24 24"
-            width="44"
-            height="44"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <circle cx="11" cy="11" r="8" />
-            <path d="m21 21-4.3-4.3" />
-          </svg>
+        <!-- 無搜尋結果 -->
+        <div id="no-results" class="no-results hidden">
+          <div class="big">
+            <svg
+              class="icon"
+              viewBox="0 0 24 24"
+              width="44"
+              height="44"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.3-4.3" />
+            </svg>
+          </div>
+          <p data-i18n="noresult.title">找不到符合條件的計時器</p>
+          <p class="hint" data-i18n="noresult.hint">
+            試試其他關鍵字，或清空搜尋欄。
+          </p>
         </div>
-        <p data-i18n="noresult.title">找不到符合條件的計時器</p>
-        <p class="hint" data-i18n="noresult.hint">
-          試試其他關鍵字，或清空搜尋欄。
-        </p>
-      </div>
 
-      <!-- 卡片格 -->
-      <div id="records-grid" class="grid"></div>
+        <!-- 卡片格 -->
+        <div id="records-grid" class="grid"></div>
       </main>
       <!-- /scroll-area -->
     </div>
@@ -407,16 +438,46 @@
       </div>
     </div>
 
+    <!-- 頻道總覽彈窗 -->
+    <div
+      id="channels-modal"
+      class="modal"
+      aria-hidden="true"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="channels-title"
+    >
+      <div class="modal-card">
+        <div class="modal-head">
+          <h2 id="channels-title" data-i18n="channels.title">頻道總覽</h2>
+        </div>
+        <div class="modal-body">
+          <div id="channels-summary" class="channels-summary"></div>
+          <div id="channels-list" class="channels-list"></div>
+          <div class="modal-actions">
+            <button
+              id="channels-close"
+              type="button"
+              class="btn btn-cancel"
+              data-i18n="btn.cancel"
+            >
+              取消
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 分離模組：依相依順序載入 -->
-    <script src="js/theme.js"></script>
-    <script src="js/config.js"></script>
-    <script src="js/i18n.js"></script>
-    <script src="js/storage.js"></script>
-    <script src="js/sound.js"></script>
-    <script src="js/timer.js"></script>
-    <script src="js/toast.js"></script>
-    <script src="js/icons.js"></script>
-    <script src="js/render.js"></script>
-    <script src="js/app.js"></script>
+    <script src="js/theme.js?v=20"></script>
+    <script src="js/config.js?v=20"></script>
+    <script src="js/i18n.js?v=20"></script>
+    <script src="js/storage.js?v=20"></script>
+    <script src="js/sound.js?v=20"></script>
+    <script src="js/timer.js?v=20"></script>
+    <script src="js/toast.js?v=20"></script>
+    <script src="js/icons.js?v=20"></script>
+    <script src="js/render.js?v=20"></script>
+    <script src="js/app.js?v=20"></script>
   </body>
 </html>

@@ -19,10 +19,12 @@
   let alertedIds = new Set();
   // 畫面差異比對用；null 為「強制重建」哨兵（空清單的簽章為 ''，故不可用 '' 當哨兵）
   let lastSignature = null;
-  // 上一輪畫面上的卡片 id，用來判斷哪些是「新出現」的卡片（只讓新卡做進場動畫）
-  let prevIds = new Set();
+  // id → 卡片 DOM 對照，tick 更新時直接取用；reconcile 時判斷新/舊卡片
+  let cardById = new Map();
   // 篩選列簽章：內容沒變就不重建，避免每 500ms 重建 chip 導致點擊被中斷
   let lastFilterSig = null;
+  // 頻道總覽抽屜開啟時的簽章：內容有變才重建清單（保留捲動位置）
+  let lastChannelsSig = null;
   // 卡片頻道就地編輯中：暫停整批重建，避免輸入框被 tick 重繪清掉
   let inlineEditing = false;
   // 搜尋關鍵字（名稱 / 備註 / 頻道）
@@ -51,6 +53,9 @@
   const minutesInput = $('#minutes-input');
   const persistToggle = $('#persist-toggle');
   const soundToggle = $('#sound-toggle');
+  const channelsModal = $('#channels-modal');
+  const channelsList = $('#channels-list');
+  const channelsSummary = $('#channels-summary');
 
   /* ---------------- 工具 ---------------- */
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -98,9 +103,26 @@
       matchesSearch(r));
   }
 
+  /* 一次算好所有紀錄的狀態（每個 tick 只算一次，供排序 / 摘要 / 渲染共用） */
+  function computeStates(now) {
+    const m = new Map();
+    for (const r of records) m.set(r.id, MapleTimer.computeState(r, now));
+    return m;
+  }
+
+  /* 用快取狀態排序（可重生優先 → 剩餘時間近者在前），避免排序時重算 computeState */
+  function sortWithStates(list, stateById) {
+    return [...list].sort((a, b) => {
+      const sa = stateById.get(a.id), sb = stateById.get(b.id);
+      if (sa.ready !== sb.ready) return sa.ready ? -1 : 1;
+      if (sa.ready) return sb.overdue - sa.overdue;
+      return sa.remaining - sb.remaining;
+    });
+  }
+
   /* ---------------- 渲染 ---------------- */
-  function render() {
-    const now = Date.now();
+  function render(stateById) {
+    if (!stateById) stateById = computeStates(Date.now());
     const types = buildTypes();
 
     // 篩選鍵若已不存在則重設
@@ -119,11 +141,11 @@
       updateFilterOverflow();   // 標籤重建後重新判斷是否溢出
     }
 
-    const sorted = MapleTimer.sortRecords(visibleRecords(), now);
-    const states = sorted.map(r => MapleTimer.computeState(r, now));
+    const sorted = sortWithStates(visibleRecords(), stateById);
+    const states = sorted.map(r => stateById.get(r.id));
 
     // 摘要：以全部紀錄計數（不受篩選 / 搜尋影響）
-    updateSummary(now);
+    updateSummary(stateById);
 
     // 空狀態 / 無搜尋結果
     emptyState.classList.toggle('hidden', records.length > 0);
@@ -131,38 +153,84 @@
       noResults.classList.toggle('hidden', !(records.length > 0 && sorted.length === 0));
     }
 
-    // 用「順序 + 可重生狀態」當簽章，結構有變才整批重建
-    const signature = sorted.map((r, i) => r.id + (states[i].ready ? 'R' : 'C')).join('|');
-    if (signature !== lastSignature && !inlineEditing) {
-      lastSignature = signature;
-      grid.innerHTML = '';
-      const handlers = { onKill, onCopy, onEdit, onDelete, stepChannel, beginChannelEdit, endChannelEdit };
-      let newCount = 0;
-      sorted.forEach((r, i) => {
-        const isNew = !prevIds.has(r.id);
-        const card = MapleRender.buildCard(r, states[i], handlers);
-        if (isNew) {
-          card.classList.add('card-enter');
-          // 多張同時進場時做輕微錯落，最多疊到 6 張避免拖太久
-          card.style.animationDelay = Math.min(newCount++, 6) * 45 + 'ms';
-        }
-        grid.appendChild(card);
-      });
-      prevIds = new Set(sorted.map(r => r.id));
+    // 只有「順序」改變時才做 keyed 重排（搬移既有節點、不重建 → 圖片不重載）；
+    // 否則僅就地更新每張卡片的動態文字。
+    const orderSig = sorted.map(r => r.id).join('|');
+    if (orderSig !== lastSignature && !inlineEditing) {
+      lastSignature = orderSig;
+      reconcileCards(sorted, states);
     } else {
       sorted.forEach((r, i) => {
-        const card = grid.querySelector(`[data-id="${r.id}"]`);
+        const card = cardById.get(r.id);
         if (card) MapleRender.updateCard(card, r, states[i]);
       });
     }
+
+    // 頻道總覽抽屜開啟中：內容有變才重建清單（保留捲動位置）
+    if (channelsModal && channelsModal.classList.contains('open')) {
+      const sig = records
+        .map(r => r.id + ':' + r.channel + (stateById.get(r.id).ready ? 'R' : 'C'))
+        .join('|');
+      if (sig !== lastChannelsSig) {
+        lastChannelsSig = sig;
+        const st = channelsList.scrollTop;
+        buildChannelsList();
+        channelsList.scrollTop = st;
+      }
+    }
   }
 
-  /* 工具列摘要：總數與可重生數 */
-  function updateSummary(now) {
+  /* 卡片「靜態內容」指紋：語言 + 圖示身分 + 名稱標籤改變時才需重建整張卡
+   * （頻道 / 間隔屬動態，由 updateCard 就地同步，不列入） */
+  function cardContentKey(r) {
+    return [
+      MapleI18n.lang, r.iconType, r.monsterId || '', r.monsterName || '',
+      r.symbol || '', r.color || '', r.label || '',
+    ].join('|');
+  }
+
+  /* Keyed 重排：既有卡片搬移排序、內容有變才重建、其餘只更新（避免整批重建與圖片重載） */
+  function reconcileCards(sorted, states) {
+    const handlers = { onKill, onCopy, onEdit, onDelete, stepChannel, beginChannelEdit, endChannelEdit };
+    const nextIds = new Set();
+    let newCount = 0;
+    sorted.forEach((r, i) => {
+      nextIds.add(r.id);
+      const ck = cardContentKey(r);
+      let card = cardById.get(r.id);
+      if (!card) {
+        // 全新卡片：建立 + 進場動畫（播完就移除 class，避免之後搬移時重播）
+        card = MapleRender.buildCard(r, states[i], handlers);
+        card._ck = ck;
+        card.classList.add('card-enter');
+        card.style.animationDelay = Math.min(newCount++, 6) * 45 + 'ms';
+        card.addEventListener('animationend', () => card.classList.remove('card-enter'), { once: true });
+        cardById.set(r.id, card);
+      } else if (card._ck !== ck) {
+        // 靜態內容變了（切語言 / 編輯怪物或備註 / 頻道編輯收尾）→ 重建這一張
+        const fresh = MapleRender.buildCard(r, states[i], handlers);
+        fresh._ck = ck;
+        card.replaceWith(fresh);
+        cardById.set(r.id, fresh);
+        card = fresh;
+      } else {
+        MapleRender.updateCard(card, r, states[i]);
+      }
+      // 只在位置不對時才搬移（最小化 DOM 變動，避免整批卡片重排/重播動畫）
+      if (grid.children[i] !== card) grid.insertBefore(card, grid.children[i] || null);
+    });
+    // 移除已不在清單中的卡片
+    cardById.forEach((card, id) => {
+      if (!nextIds.has(id)) { card.remove(); cardById.delete(id); }
+    });
+  }
+
+  /* 工具列摘要：總數與可重生數（用快取狀態，不再重算） */
+  function updateSummary(stateById) {
     if (!summary) return;
     const total = records.length;
-    const ready = records.reduce(
-      (n, r) => n + (MapleTimer.computeState(r, now).ready ? 1 : 0), 0);
+    let ready = 0;
+    for (const r of records) if (stateById.get(r.id).ready) ready++;
     if (total === 0) {
       summary.textContent = '';
       summary.classList.add('hidden');
@@ -177,26 +245,27 @@
   /* ---------------- tick 迴圈 ---------------- */
   function tick() {
     const now = Date.now();
+    const stateById = computeStates(now);   // 本輪唯一一次計算
 
     // 偵測「本輪剛變成可重生」的紀錄 → 播提示音 + 螢幕報讀
     let justReady = false;
     const readyNames = [];
-    records.forEach(r => {
-      const ready = MapleTimer.computeState(r, now).ready;
+    for (const r of records) {
+      const ready = stateById.get(r.id).ready;
       if (ready && !alertedIds.has(r.id)) {
         alertedIds.add(r.id);
         justReady = true;
         readyNames.push(`${recordLabel(r)} CH${r.channel}`);
       }
       if (!ready) alertedIds.delete(r.id);
-    });
+    }
     if (justReady) {
       if (prefs.soundOn) MapleSound.chime();
       const sep = MapleI18n.lang === 'en' ? ', ' : '、';
       announce(MapleI18n.t('announce.respawned', { names: readyNames.join(sep) }));
     }
 
-    render();
+    render(stateById);   // 沿用同一份狀態，不再重算
   }
 
   /* 螢幕報讀：更新 aria-live 區域（視覺隱藏） */
@@ -232,6 +301,13 @@
   function onKill(id) {
     const r = records.find(x => x.id === id);
     if (!r) return;
+    // 重置以「該怪的預設重生間隔」重新起算，而非母體被手動改過的間隔
+    const mon = r.iconType === 'monster' ? MONSTER_BY_ID[r.monsterId] : null;
+    if (mon && (mon.defaultH != null || mon.defaultM != null)) {
+      r.intervalH = mon.defaultH || 0;
+      r.intervalM = mon.defaultM || 0;
+      r.intervalMs = (r.intervalH * 60 + r.intervalM) * 60 * 1000;
+    }
     r.startTime = Date.now();   // 以現在時間重新倒數
     alertedIds.delete(id);
     save();
@@ -280,6 +356,13 @@
       channel: Number.isFinite(src.channel) ? maxCh + 1 : src.channel,
       startTime: Date.now(),
     };
+    // 複製時用「該怪的預設重生間隔」，而非母體被改過的間隔
+    const mon = src.iconType === 'monster' ? MONSTER_BY_ID[src.monsterId] : null;
+    if (mon && (mon.defaultH != null || mon.defaultM != null)) {
+      copy.intervalH = mon.defaultH || 0;
+      copy.intervalM = mon.defaultM || 0;
+      copy.intervalMs = (copy.intervalH * 60 + copy.intervalM) * 60 * 1000;
+    }
     const idx = records.findIndex(x => x.id === id);
     records.splice(idx + 1, 0, copy);   // 插在原卡片後面
     alertedIds.delete(copy.id);
@@ -333,7 +416,10 @@
         save();
       }
     }
-    lastSignature = null;   // 重建卡片（還原/套用新頻道）
+    // 讓 reconcile 重建這張卡（清掉殘留的頻道輸入框、還原標籤）
+    const c = cardById.get(id);
+    if (c) c._ck = '';
+    lastSignature = null;
     render();
   }
 
@@ -406,6 +492,77 @@
     if (first) requestAnimationFrame(() => first.focus());
   }
 
+  /* ---------------- 頻道總覽 ---------------- */
+  function buildChannelsList() {
+    const now = Date.now();
+    channelsList.innerHTML = '';
+    if (records.length === 0) {
+      channelsSummary.textContent = '';
+      const p = document.createElement('p');
+      p.className = 'channels-empty';
+      p.textContent = MapleI18n.t('channels.empty');
+      channelsList.appendChild(p);
+      return;
+    }
+    // 依種類（同隻 BOSS）分組
+    const groups = new Map();
+    records.forEach(r => {
+      const key = MapleTimer.typeKey(r);
+      if (!groups.has(key)) groups.set(key, { label: recordLabel(r), items: [] });
+      groups.get(key).items.push({ ch: r.channel, ready: MapleTimer.computeState(r, now).ready });
+    });
+    channelsSummary.textContent = MapleI18n.t('channels.summary', {
+      boss: groups.size, ch: records.length,
+    });
+    // 依名稱排序分組，組內依頻道排序；同頻道出現多次標記為重複
+    [...groups.values()]
+      .sort((a, b) => a.label.localeCompare(b.label))
+      .forEach(g => {
+        g.items.sort((a, b) => a.ch - b.ch);
+        const counts = {};
+        g.items.forEach(it => { counts[it.ch] = (counts[it.ch] || 0) + 1; });
+
+        const row = document.createElement('div');
+        row.className = 'ch-group';
+        const name = document.createElement('div');
+        name.className = 'ch-group-name';
+        name.textContent = g.label;
+        const chips = document.createElement('div');
+        chips.className = 'ch-chips';
+        g.items.forEach(it => {
+          const chip = document.createElement('span');
+          chip.className = 'ch-chip'
+            + (it.ready ? ' is-ready' : '')
+            + (counts[it.ch] > 1 ? ' is-dup' : '');
+          chip.textContent = 'CH ' + it.ch;
+          if (counts[it.ch] > 1) chip.title = MapleI18n.t('channels.dupTip');
+          chips.appendChild(chip);
+        });
+        row.append(name, chips);
+        channelsList.appendChild(row);
+      });
+  }
+
+  function openChannels() {
+    if (!channelsModal) return;
+    lastChannelsSig = null;      // 強制重建一次
+    buildChannelsList();
+    channelsModal.classList.add('open');
+    channelsModal.setAttribute('aria-hidden', 'false');
+    // 擠壓主內容（不遮蓋，兩邊同時可見）
+    document.documentElement.classList.add('drawer-open');
+  }
+  function closeChannels() {
+    if (!channelsModal) return;
+    channelsModal.classList.remove('open');
+    channelsModal.setAttribute('aria-hidden', 'true');
+    document.documentElement.classList.remove('drawer-open');
+  }
+  function toggleChannels() {
+    if (channelsModal && channelsModal.classList.contains('open')) closeChannels();
+    else openChannels();
+  }
+
   function closeModal() {
     modal.classList.remove('open');
     modal.setAttribute('aria-hidden', 'true');
@@ -466,6 +623,15 @@
     }
 
     const label = labelInput.value.trim();
+
+    // 同一隻 BOSS（同種類）同一頻道不可重複
+    const typeKey = MapleTimer.typeKey({ ...iconFields, label });
+    const dup = records.some(r =>
+      r.id !== editingId && r.channel === channel && MapleTimer.typeKey(r) === typeKey);
+    if (dup) {
+      return (formErr.textContent = MapleI18n.t('err.dupChannel', { n: channel }));
+    }
+
     const persist = persistToggle ? persistToggle.checked : true;
 
     if (editingId) {
@@ -538,9 +704,15 @@
     const logoImg = $('#logo-img');
     if (logoImg && MapleConfig.LOGO_IMAGE) logoImg.src = MapleConfig.LOGO_IMAGE;
 
-    // 主題切換時重繪卡片（讓進度條配色跟著主題的色盤變）
+    // 主題切換：只換配色，不整批重建（避免圖片重載閃爍）
     if (window.MapleTheme) {
-      MapleTheme.themeChanged = () => { lastSignature = null; render(); };
+      MapleTheme.themeChanged = () => {
+        const byId = new Map(records.map(r => [r.id, r]));
+        cardById.forEach((card, id) => {
+          const r = byId.get(id);
+          if (r) MapleRender.recolorCard(card, r);
+        });
+      };
     }
 
     // 語言（會套用靜態 DOM 翻譯，並在切換時重繪動態內容）
@@ -565,8 +737,26 @@
     $('#cancel-btn').addEventListener('click', closeModal);
     $('#submit-btn').addEventListener('click', submitForm);
     modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+    // 在輸入欄位按 Enter 直接建立（不需點按鈕）
+    modal.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      const el = e.target;
+      if (el && el.tagName === 'INPUT' && el.type !== 'checkbox') {
+        e.preventDefault();
+        submitForm();
+      }
+    });
+
+    // 頻道總覽（推擠式抽屜，按鈕切換開關）
+    $('#channels-btn').addEventListener('click', toggleChannels);
+    $('#channels-close').addEventListener('click', closeChannels);
+
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && modal.classList.contains('open')) closeModal();
+      if (e.key === 'Escape') {
+        // 一次只關一層：先關最後開啟的新增/編輯彈窗，再按一次才關頻道總覽
+        if (modal.classList.contains('open')) { closeModal(); return; }
+        if (channelsModal && channelsModal.classList.contains('open')) { closeChannels(); return; }
+      }
       trapFocus(e);
     });
 
