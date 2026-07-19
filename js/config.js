@@ -20,6 +20,9 @@ const petImage = (petId) =>
   `${MAPLE_API}/${MAPLE_REGION}/${MAPLE_VERSION}/pet/${petId}/render/change/animated/`;
 const LOGO_IMAGE = petImage(LOGO_PET_ID);
 
+/* 程式版號（顯示在畫面上；改版時一起更新，並記得把 index.html 的 ?v= 也 +1） */
+const APP_VERSION = 'v1.4';
+
 /* 怪物英文名（英文介面用；key = 下方的 id，多為英文原名） */
 const MONSTER_EN = {
   pinkbean: "Pink Bean",
@@ -197,4 +200,4 @@ const COLORS = [
 const MONSTER_BY_ID = Object.fromEntries(MONSTERS.map((m) => [m.id, m]));
 const COLOR_BY_ID = Object.fromEntries(COLORS.map((c) => [c.id, c]));
 
-window.MapleConfig = { MONSTERS, SYMBOLS, COLORS, MONSTER_BY_ID, COLOR_BY_ID, petImage, LOGO_PET_ID, LOGO_IMAGE };
+window.MapleConfig = { MONSTERS, SYMBOLS, COLORS, MONSTER_BY_ID, COLOR_BY_ID, petImage, LOGO_PET_ID, LOGO_IMAGE, APP_VERSION };

@@ -6,6 +6,24 @@
 const GAUGE_R = 20;                     // 右半圓進度半徑
 const GAUGE_LEN = Math.PI * GAUGE_R;    // 半圓弧長
 
+/* 進度環：以 5 分鐘為單位分色（越接近重生越暖），最後 1 分鐘轉金色；
+ * 30 分鐘以上則沿用該卡片 / 主題色。 */
+const RING_GOLD = '#ffc93c';
+function ringBandColor(remainingMs, fallback) {
+  const mins = remainingMs / 60000;
+  if (mins < 1) return RING_GOLD;   // 最後 1 分鐘：金
+  if (mins < 5) return '#ff7a3b';   // 0–5：橘
+  if (mins < 10) return '#ff9f3d';  // 5–10：琥珀
+  if (mins < 15) return '#f2c53c';  // 10–15：黃
+  if (mins < 20) return '#bcd24a';  // 15–20：黃綠
+  if (mins < 25) return '#7fc65c';  // 20–25：綠
+  if (mins < 30) return '#4fbf9e';  // 25–30：青
+  return fallback;                  // 30 分以上：卡片 / 主題色
+}
+
+/* 載入失敗的圖片網址快取：之後重建同一張卡直接顯示替代符號，不再重試 / 閃爍 */
+const FAILED_IMG = new Set();
+
 /* 每個主題各有一組「進度條色盤」，讓進度環配色跟著主題變化；
  * 自訂圖示則直接用使用者選的顏色。 */
 const CARD_PALETTES = {
@@ -31,6 +49,17 @@ const Render = {
     return '#' + ((1 << 24) + (r << 16) + (g << 8) + bl).toString(16).slice(1);
   },
 
+  /* 目前主題的警示色（讀 CSS 變數並快取；主題切換時由 app 呼叫 invalidate 清除） */
+  _dangerHex: null,
+  dangerColor() {
+    if (!this._dangerHex) {
+      const v = getComputedStyle(document.documentElement)
+        .getPropertyValue('--danger').trim();
+      this._dangerHex = /^#[0-9a-fA-F]{6}$/.test(v) ? v : '#e9695c';
+    }
+    return this._dangerHex;
+  },
+
   /* 依紀錄決定卡片進度色：自訂圖示用其顏色；怪物用 id 雜湊，從「目前主題」的色盤挑一色 */
   cardColor(record) {
     if (record.iconType === 'custom' && record.color) {
@@ -44,22 +73,35 @@ const Render = {
     return palette[h % palette.length];
   },
 
-  /* ---- 左側全高圖像層：怪物圖（失敗退回符號）或自訂符號；右緣以漸層淡出 ---- */
+  /* ---- 左側全高圖像層：怪物圖（載入佔位 / 失敗退回符號）或自訂符號；右緣以漸層淡出 ---- */
   buildMedia(record) {
     const media = document.createElement('div');
     media.className = 'card-media';
 
     if (record.iconType === 'monster') {
       const mon = MapleConfig.MONSTER_BY_ID[record.monsterId];
+      const url = mon ? mon.image : '';
+      const fallbackGlyph = () => this.mediaGlyph(
+        (mon && mon.fallback) || (record.monsterName || '?')[0], null);
+
+      // 之前載入失敗過 → 直接顯示替代符號，不再嘗試（免閃爍）
+      if (!url || FAILED_IMG.has(url)) {
+        media.appendChild(fallbackGlyph());
+        return media;
+      }
+
+      media.classList.add('is-loading');   // 載入佔位（微光）
       const img = document.createElement('img');
-      img.src = mon ? mon.image : '';
+      img.src = url;
       img.alt = record.monsterName || '';
       img.loading = 'lazy';
+      img.decoding = 'async';
+      img.addEventListener('load', () => media.classList.remove('is-loading'), { once: true });
       img.onerror = () => {
-        // 圖片載入失敗 → 退回顯示第一個字，維持可用性
+        FAILED_IMG.add(url);
+        media.classList.remove('is-loading');
         img.remove();
-        media.appendChild(this.mediaGlyph(
-          (mon && mon.fallback) || (record.monsterName || '?')[0], null));
+        media.appendChild(fallbackGlyph());
       };
       media.appendChild(img);
     } else {
@@ -218,6 +260,7 @@ const Render = {
     card._countdown = countdown;
     card._pct = pct;
     card._ring = gauge.querySelector('.ring-progress');
+    card._stops = gauge.querySelectorAll('stop');   // 漸層三個色停，換色時就地更新
     card._ch = ch;
 
     // 底部：整條分格操作列（圖示 + 文字）
@@ -257,6 +300,15 @@ const Render = {
       const off = String(GAUGE_LEN * (1 - state.progress));
       if (ring._off !== off) { ring.style.strokeDashoffset = off; ring._off = off; }
     }
+
+    // 進度環顏色：超時→珊瑚紅；剛可重生→金；倒數中依 5 分鐘分色（30 分以上用卡片/主題色）
+    const color = state.overdueLong
+      ? this.dangerColor()
+      : state.ready
+        ? RING_GOLD
+        : ringBandColor(state.remaining, this.cardColor(record));
+    this.setRingColor(card, color);
+
     const pct = card._pct || (card._pct = card.querySelector('.card-pct'));
     if (pct) {
       const t = Math.round(state.progress * 100) + '%';
@@ -279,19 +331,28 @@ const Render = {
         ch.setAttribute('aria-label', MapleI18n.t('ch.aria', { n: record.channel }));
       }
     }
+    // 可重生時的定時漣漪由 CSS（.card.is-ready .card-gauge::after）處理，不需 JS
   },
 
-  /* ---- 只換配色（主題切換用）：更新 --card-color 與半圓漸層，不重建卡片 ---- */
-  recolorCard(card, record) {
-    const cc = this.cardColor(record);
-    card.style.setProperty('--card-color', cc);
-    const stops = card.querySelectorAll('.card-gauge stop');
-    if (stops.length >= 3) {
-      const light = this.mixHex(cc, '#ffffff', 0.55);
-      stops[0].setAttribute('stop-color', light);
-      stops[1].setAttribute('stop-color', cc);
+  /* 設定進度環顏色（更新 --card-color 與半圓漸層 3 個色停）；只在改變時動 DOM */
+  setRingColor(card, hex) {
+    if (card._rc === hex) return;
+    card._rc = hex;
+    card.style.setProperty('--card-color', hex);
+    const stops = card._stops || (card._stops = card.querySelectorAll('.card-gauge stop'));
+    if (stops && stops.length >= 3) {
+      // 明顯的漸層：起點偏深 → 本色 → 收尾偏亮
+      const deep = this.mixHex(hex, '#000000', 0.18);
+      const light = this.mixHex(hex, '#ffffff', 0.5);
+      stops[0].setAttribute('stop-color', deep);
+      stops[1].setAttribute('stop-color', hex);
       stops[2].setAttribute('stop-color', light);
     }
+  },
+
+  /* 主題切換用：清掉快取色，讓下次 updateCard 依新主題重算環色（不重建卡片） */
+  invalidateColor(card) {
+    card._rc = null;
   },
 
   /* ---- 篩選列（種類 ≥ 2 才顯示） ---- */

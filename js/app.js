@@ -704,14 +704,16 @@
     const logoImg = $('#logo-img');
     if (logoImg && MapleConfig.LOGO_IMAGE) logoImg.src = MapleConfig.LOGO_IMAGE;
 
-    // 主題切換：只換配色，不整批重建（避免圖片重載閃爍）
+    // 畫面版號
+    const verEl = $('#app-version');
+    if (verEl && MapleConfig.APP_VERSION) verEl.textContent = MapleConfig.APP_VERSION;
+
+    // 主題切換：清掉每張卡的環色快取，重繪一次（updateCard 依新主題重算色），不整批重建
     if (window.MapleTheme) {
       MapleTheme.themeChanged = () => {
-        const byId = new Map(records.map(r => [r.id, r]));
-        cardById.forEach((card, id) => {
-          const r = byId.get(id);
-          if (r) MapleRender.recolorCard(card, r);
-        });
+        MapleRender._dangerHex = null;   // 警示色隨主題改變，清快取
+        cardById.forEach(card => MapleRender.invalidateColor(card));
+        render();
       };
     }
 
@@ -794,8 +796,22 @@
     });
     document.addEventListener('click', () => MapleSound.unlock(), { once: true });
 
+    // 閒置時預載所有怪物圖，之後開卡片 / 選格更快、少閃
+    const preload = () => MapleConfig.MONSTERS.forEach(m => {
+      if (m.image) { const im = new Image(); im.src = m.image; }
+    });
+    if (window.requestIdleCallback) requestIdleCallback(preload, { timeout: 3000 });
+    else setTimeout(preload, 1500);
+
     render();
-    setInterval(tick, 500);
+    scheduleTick();   // 對齊整秒的 tick（顯示更準、每秒只更新一次）
+  }
+
+  /* tick 對齊整秒：每次算到下一個整秒邊界再觸發，取代固定 500ms 輪詢 */
+  function scheduleTick() {
+    tick();
+    const delay = 1000 - (Date.now() % 1000);
+    setTimeout(scheduleTick, delay + 20);   // +20ms 緩衝，確保跨過秒邊界
   }
 
   document.addEventListener('DOMContentLoaded', init);
