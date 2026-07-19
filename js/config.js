@@ -4,7 +4,7 @@
  * 只要把圖片放進 assets/monsters/ 並在 MONSTERS 加一筆即可。
  * ============================================================ */
 
-/* 怪物圖片改為呼叫 maplestory.io API 動態取得（單張靜態 PNG，第 0 影格）。
+/* 怪物圖片改為呼叫 maplestory.io API 動態取得
  * mobId 為該站的怪物編號；換版本 / 地區只要改下面三個常數即可。
  * 若 API 圖載入失敗（img.onerror）會自動退回 fallback 符號徽章。 */
 const MAPLE_API = "https://maplestory.io/api";
@@ -12,6 +12,13 @@ const MAPLE_REGION = "GMS";
 const MAPLE_VERSION = "247";
 const mobImage = (mobId) =>
   `${MAPLE_API}/${MAPLE_REGION}/${MAPLE_VERSION}/mob/${mobId}/render/stand/`;
+
+/* LOGO：改用 maplestory.io 寵物動畫（菇菇寶貝）。
+ * 未來只要替換 LOGO_PET_ID 即可換成別隻寵物。 */
+const LOGO_PET_ID = 5000042; // 菇菇寶貝
+const petImage = (petId) =>
+  `${MAPLE_API}/${MAPLE_REGION}/${MAPLE_VERSION}/pet/${petId}/render/change/animated/`;
+const LOGO_IMAGE = petImage(LOGO_PET_ID);
 
 /* 怪物英文名（英文介面用；key = 下方的 id，多為英文原名） */
 const MONSTER_EN = {
@@ -190,4 +197,4 @@ const COLORS = [
 const MONSTER_BY_ID = Object.fromEntries(MONSTERS.map((m) => [m.id, m]));
 const COLOR_BY_ID = Object.fromEntries(COLORS.map((c) => [c.id, c]));
 
-window.MapleConfig = { MONSTERS, SYMBOLS, COLORS, MONSTER_BY_ID, COLOR_BY_ID };
+window.MapleConfig = { MONSTERS, SYMBOLS, COLORS, MONSTER_BY_ID, COLOR_BY_ID, petImage, LOGO_PET_ID, LOGO_IMAGE };

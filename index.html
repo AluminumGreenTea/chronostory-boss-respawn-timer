@@ -4,6 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>楓之谷 · 怪物重生計時器</title>
+    <!-- 中文網頁字體：思源黑體 Noto Sans TC（SIL OFL，可商用） -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&family=Roboto+Mono:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="css/style.css" />
   </head>
   <body>
@@ -13,21 +20,7 @@
       <!-- 頁首 -->
       <header class="app-header">
         <div class="logo-mark">
-          <svg
-            class="icon"
-            viewBox="0 0 24 24"
-            width="24"
-            height="24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <line x1="10" y1="2" x2="14" y2="2" />
-            <line x1="12" y1="14" x2="15" y2="11" />
-            <circle cx="12" cy="14" r="8" />
-          </svg>
+          <img id="logo-img" alt="" aria-hidden="true" />
         </div>
         <div class="title-block">
           <h1>
@@ -57,6 +50,7 @@
               ></span
             >
           </h1>
+          <span class="app-subtitle">MapleStory Boss Respawn Timer</span>
         </div>
         <div class="header-tools">
           <button
@@ -173,6 +167,8 @@
       </div>
       <!-- /topbar -->
 
+      <!-- 只有這一區會捲動 -->
+      <main id="scroll-area" class="scroll-area">
       <!-- 空狀態 -->
       <div id="empty-state" class="empty-state">
         <div class="big">
@@ -224,6 +220,8 @@
 
       <!-- 卡片格 -->
       <div id="records-grid" class="grid"></div>
+      </main>
+      <!-- /scroll-area -->
     </div>
 
     <!-- 螢幕報讀專用（視覺隱藏） -->
@@ -362,6 +360,27 @@
                 />
               </div>
             </div>
+          </div>
+
+          <!-- 是否記錄到此瀏覽器 -->
+          <div class="field">
+            <label class="switch-label" for="persist-toggle">
+              <span class="switch-text">
+                <span data-i18n="field.persist">記錄到此瀏覽器</span>
+                <span class="sub" data-i18n="persist.sub"
+                  >關閉則僅本次瀏覽有效，重新整理後消失</span
+                >
+              </span>
+              <input
+                id="persist-toggle"
+                class="switch-input"
+                type="checkbox"
+                checked
+              />
+              <span class="switch-track" aria-hidden="true"
+                ><span class="switch-thumb"></span
+              ></span>
+            </label>
           </div>
 
           <div id="form-error" class="form-error"></div>

@@ -49,11 +49,13 @@
   const channelInput = $('#channel-input');
   const hoursInput = $('#hours-input');
   const minutesInput = $('#minutes-input');
+  const persistToggle = $('#persist-toggle');
   const soundToggle = $('#sound-toggle');
 
   /* ---------------- 工具 ---------------- */
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-  const save = () => MapleStorage.saveRecords(records);
+  // 只把「要記錄到瀏覽器」的計時器寫入 localStorage；persist === false 者僅存在於本次瀏覽
+  const save = () => MapleStorage.saveRecords(records.filter(r => r.persist !== false));
 
   /* 依目前語言取得一筆紀錄的顯示名稱（怪物用 id 查，跟著語言變） */
   function recordLabel(r) {
@@ -114,6 +116,7 @@
         lastSignature = null;   // 強制重建卡片
         render();
       });
+      updateFilterOverflow();   // 標籤重建後重新判斷是否溢出
     }
 
     const sorted = MapleTimer.sortRecords(visibleRecords(), now);
@@ -201,10 +204,22 @@
     if (liveRegion) liveRegion.textContent = text;
   }
 
+  /* 篩選列是否溢出（標籤超過視窗寬）：切換淡出提示 + hover tooltip */
+  function updateFilterOverflow() {
+    if (!filterBar) return;
+    const overflow = filterBar.scrollWidth - filterBar.clientWidth > 2;
+    filterBar.classList.toggle('is-overflow', overflow);
+    if (overflow) {
+      filterBar.title = MapleI18n.t('filter.scrollHint');
+    } else {
+      filterBar.removeAttribute('title');
+    }
+  }
+
   /* 切換語言後：重繪需要用到字串的動態內容 */
   function onLangChange() {
     updateSoundToggle();
-    if (window.MapleTheme && MapleTheme.apply) MapleTheme.apply(MapleTheme.current);
+    if (window.MapleTheme && MapleTheme.refreshLabels) MapleTheme.refreshLabels();
     if (modal.classList.contains('open')) {
       modalTitle.textContent = MapleI18n.t(editingId ? 'modal.edit' : 'modal.add');
     }
@@ -366,6 +381,7 @@
       channelInput.value = record.channel;
       hoursInput.value = record.intervalH || 0;
       minutesInput.value = record.intervalM || 0;
+      if (persistToggle) persistToggle.checked = record.persist !== false;
     } else {
       modalTitle.textContent = MapleI18n.t('modal.add');
       editingId = null;
@@ -377,6 +393,7 @@
       channelInput.value = '';
       hoursInput.value = '';
       minutesInput.value = '';
+      if (persistToggle) persistToggle.checked = prefs.persistNew !== false;
     }
     highlightMonster();
     highlightSymbol();
@@ -449,12 +466,13 @@
     }
 
     const label = labelInput.value.trim();
+    const persist = persistToggle ? persistToggle.checked : true;
 
     if (editingId) {
       const r = records.find(x => x.id === editingId);
       if (r) {
         Object.assign(r, iconFields, {
-          label, channel, intervalH: h, intervalM: m, intervalMs,
+          label, channel, intervalH: h, intervalM: m, intervalMs, persist,
         });
         // 間隔改動後重新以現在時間起算，避免出現負到爆的狀況
         r.startTime = Date.now();
@@ -465,9 +483,14 @@
         id: uid(),
         ...iconFields,
         label, channel, intervalH: h, intervalM: m, intervalMs,
+        persist,                 // 是否記錄到此瀏覽器
         startTime: Date.now(),   // 建立當下立即開始倒數
       });
     }
+
+    // 記住這次的選擇，作為下次新增的預設
+    prefs.persistNew = persist;
+    MapleStorage.savePrefs(prefs);
 
     save();
     closeModal();
@@ -511,6 +534,15 @@
 
   /* ---------------- 初始化 ---------------- */
   function init() {
+    // LOGO：套用參數化的寵物動畫圖（換 ID 只需改 config 的 LOGO_PET_ID）
+    const logoImg = $('#logo-img');
+    if (logoImg && MapleConfig.LOGO_IMAGE) logoImg.src = MapleConfig.LOGO_IMAGE;
+
+    // 主題切換時重繪卡片（讓進度條配色跟著主題的色盤變）
+    if (window.MapleTheme) {
+      MapleTheme.themeChanged = () => { lastSignature = null; render(); };
+    }
+
     // 語言（會套用靜態 DOM 翻譯，並在切換時重繪動態內容）
     MapleI18n.init(onLangChange);
 
@@ -537,6 +569,21 @@
       if (e.key === 'Escape' && modal.classList.contains('open')) closeModal();
       trapFocus(e);
     });
+
+    // 篩選標籤列：滑鼠滾輪 → 左右捲動；視窗縮放時重新判斷溢出
+    if (filterBar) {
+      filterBar.addEventListener('wheel', (e) => {
+        if (filterBar.scrollWidth - filterBar.clientWidth <= 2) return;  // 沒溢出不攔截
+        // 垂直滾輪也能左右捲；已是水平滾動則保留
+        const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+        if (delta !== 0) {
+          filterBar.scrollLeft += delta;
+          e.preventDefault();
+        }
+      }, { passive: false });
+      window.addEventListener('resize', updateFilterOverflow);
+    }
+
 
     // 搜尋（即時篩選）
     if (searchInput) {

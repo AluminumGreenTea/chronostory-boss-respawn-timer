@@ -3,10 +3,47 @@
  * 卡片、進度倒數環、篩選列、表單裡的怪物 / 符號 / 顏色選格。
  * ============================================================ */
 
-const RING_R = 16;
-const RING_C = 2 * Math.PI * RING_R;   // 小進度環周長
+const GAUGE_R = 20;                     // 右半圓進度半徑
+const GAUGE_LEN = Math.PI * GAUGE_R;    // 半圓弧長
+
+/* 每個主題各有一組「進度條色盤」，讓進度環配色跟著主題變化；
+ * 自訂圖示則直接用使用者選的顏色。 */
+const CARD_PALETTES = {
+  dark:     ['#e8963a', '#5cae54', '#3f9bd6', '#9b6fd0', '#e0794e', '#33bcae', '#d9a441', '#d46a95'],
+  light:    ['#b0713a', '#8a7a3c', '#a4592f', '#6f8a4f', '#c19a4a', '#9c6b4a', '#7d8a5c', '#b5834a'],
+  starry:   ['#8b9cf0', '#b98bf0', '#5ec8e0', '#e08bd0', '#6ee0c0', '#e8c86a', '#e58ba0', '#7aa0f0'],
+  sakura:   ['#c1475f', '#d97a8e', '#e0965c', '#b0708f', '#c9a24a', '#7fa06a', '#9c6f9e', '#6f8bb0'],
+  slate:    ['#5b7d99', '#79987e', '#b0868a', '#b3a06a', '#6f9791', '#8b7f9c', '#a08a6f', '#7d8ca0'],
+  matcha:   ['#7d9150', '#8a9b6a', '#b0a05f', '#6f9080', '#a98a5f', '#9c9a5a', '#7f9b95', '#a97f6f'],
+  lavender: ['#8878aa', '#a08bb0', '#7f8bb0', '#b08a9e', '#9a9b6f', '#6f9aa0', '#b0956f', '#8f7f9e'],
+};
+const DEFAULT_PALETTE = CARD_PALETTES.dark;
 
 const Render = {
+  /* 兩色線性混合（t=0→hex，t=1→target），回傳 #rrggbb */
+  mixHex(hex, target, t) {
+    const a = parseInt(hex.slice(1), 16), b = parseInt(target.slice(1), 16);
+    const mix = (sh) => {
+      const x = (a >> sh) & 255, y = (b >> sh) & 255;
+      return Math.round(x + (y - x) * t);
+    };
+    const r = mix(16), g = mix(8), bl = mix(0);
+    return '#' + ((1 << 24) + (r << 16) + (g << 8) + bl).toString(16).slice(1);
+  },
+
+  /* 依紀錄決定卡片進度色：自訂圖示用其顏色；怪物用 id 雜湊，從「目前主題」的色盤挑一色 */
+  cardColor(record) {
+    if (record.iconType === 'custom' && record.color) {
+      const c = MapleConfig.COLOR_BY_ID[record.color];
+      if (c) return c.hex;
+    }
+    const palette = (window.MapleTheme && CARD_PALETTES[MapleTheme.current]) || DEFAULT_PALETTE;
+    const key = String(record.monsterId || record.monsterName || record.id || '');
+    let h = 0;
+    for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+    return palette[h % palette.length];
+  },
+
   /* ---- 左側全高圖像層：怪物圖（失敗退回符號）或自訂符號；右緣以漸層淡出 ---- */
   buildMedia(record) {
     const media = document.createElement('div');
@@ -53,17 +90,14 @@ const Render = {
     const who = `${displayName} CH${record.channel}`;
     card.setAttribute('role', 'group');
     card.setAttribute('aria-label', who);
+    card.style.setProperty('--card-color', this.cardColor(record));
 
-    // 左側：全高圖像（右緣漸層淡出）
-    card.appendChild(this.buildMedia(record));
+    // 主要區：左圖 + 右資訊
+    const main = document.createElement('div');
+    main.className = 'card-main';
+    main.appendChild(this.buildMedia(record));
 
-    // 中間：名稱 / 頻道 / 間隔 / 倒數
-    // 名稱（放進圓環中心）
-    const name = document.createElement('span');
-    name.className = 'card-name';
-    name.textContent = displayName;
-
-    // 頻道標籤（絕對定位右上角，保留就地編輯 / 方向鍵）
+    // 頻道標籤（左上角，保留就地編輯 / 方向鍵）
     const ch = document.createElement('span');
     ch.className = 'ch-tag ch-editable';
     ch.textContent = `CH ${record.channel}`;
@@ -130,70 +164,77 @@ const Render = {
       }
     });
 
-    card.appendChild(ch);
+    main.appendChild(ch);
 
-    // 圓環 + 中心（怪物名稱 / 倒數時間）
-    const dial = document.createElement('div');
-    dial.className = 'card-dial';
-    dial.innerHTML = `
-      <svg class="card-ring" viewBox="0 0 36 36" aria-hidden="true">
-        <circle class="ring-track" cx="18" cy="18" r="${RING_R}"></circle>
-        <circle class="ring-progress" cx="18" cy="18" r="${RING_R}"
-          stroke-dasharray="${RING_C}" stroke-dashoffset="0"
-          transform="rotate(-90 18 18)"></circle>
-      </svg>`;
-    const center = document.createElement('div');
-    center.className = 'dial-center';
+    // 右側資訊欄：名稱 + （倒數 / 剩餘時間 + 進度環 / 百分比）
+    const body = document.createElement('div');
+    body.className = 'card-body';
+
+    const name = document.createElement('span');
+    name.className = 'card-name';
+    name.textContent = displayName;
+
+    const readout = document.createElement('div');
+    readout.className = 'card-readout';
+
+    const timeCol = document.createElement('div');
+    timeCol.className = 'card-time';
     const countdown = document.createElement('div');
     countdown.className = 'card-countdown';
-    center.append(name, countdown);
-    dial.appendChild(center);
-    card.appendChild(dial);
+    const remaining = document.createElement('div');
+    remaining.className = 'card-remaining';
+    remaining.textContent = MapleI18n.t('card.remaining');
+    timeCol.append(countdown, remaining);
 
-    // 右側 / 底部：操作按鈕
+    const cc = this.cardColor(record);
+    const gid = 'grad-' + record.id;
+    const light = this.mixHex(cc, '#ffffff', 0.55);   // 上下尾端的淺色
+    const gauge = document.createElement('div');
+    gauge.className = 'card-gauge';
+    gauge.innerHTML = `
+      <svg class="card-ring" viewBox="0 0 26 46" aria-hidden="true">
+        <defs>
+          <linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="${light}"></stop>
+            <stop offset="0.5" stop-color="${cc}"></stop>
+            <stop offset="1" stop-color="${light}"></stop>
+          </linearGradient>
+        </defs>
+        <path class="ring-track" d="M3 3 A20 20 0 0 1 3 43"></path>
+        <path class="ring-progress" d="M3 3 A20 20 0 0 1 3 43"
+          stroke="url(#${gid})"
+          stroke-dasharray="${GAUGE_LEN}" stroke-dashoffset="${GAUGE_LEN}"></path>
+      </svg>`;
+    const pct = document.createElement('span');
+    pct.className = 'card-pct';
+    gauge.appendChild(pct);
+
+    readout.append(timeCol, gauge);
+    body.append(name, readout);
+    main.appendChild(body);
+    card.appendChild(main);
+
+    // 底部：整條分格操作列（圖示 + 文字）
     const actions = document.createElement('div');
     actions.className = 'card-actions';
-
-    const killBtn = document.createElement('button');
-    killBtn.className = 'btn btn-kill';
-    killBtn.type = 'button';
-    killBtn.title = MapleI18n.t('card.reset');
-    killBtn.setAttribute('aria-label', `${MapleI18n.t('card.reset')} ${who}`);
-    killBtn.innerHTML = MapleIcons.markup('reset', { size: 16 });
-    killBtn.addEventListener('click', () => handlers.onKill(record.id));
-
-    const copyBtn = document.createElement('button');
-    copyBtn.className = 'btn btn-icon';
-    copyBtn.type = 'button';
-    copyBtn.title = MapleI18n.t('card.copy');
-    copyBtn.setAttribute('aria-label', `${MapleI18n.t('card.copy')} ${who}`);
-    copyBtn.innerHTML = MapleIcons.markup('copy', { size: 16 });
-    copyBtn.addEventListener('click', () => handlers.onCopy(record.id));
-
-    const editBtn = document.createElement('button');
-    editBtn.className = 'btn btn-icon';
-    editBtn.type = 'button';
-    editBtn.title = MapleI18n.t('card.edit');
-    editBtn.setAttribute('aria-label', `${MapleI18n.t('card.edit')} ${who}`);
-    editBtn.innerHTML = MapleIcons.markup('pencil', { size: 18 });
-    editBtn.addEventListener('click', () => handlers.onEdit(record.id));
-
-    const delBtn = document.createElement('button');
-    delBtn.className = 'btn btn-icon btn-danger';
-    delBtn.type = 'button';
-    delBtn.title = MapleI18n.t('card.delete');
-    delBtn.setAttribute('aria-label', `${MapleI18n.t('card.delete')} ${who}`);
-    delBtn.innerHTML = MapleIcons.markup('trash', { size: 18 });
-    delBtn.addEventListener('click', () => handlers.onDelete(record.id));
-
-    actions.append(killBtn, copyBtn, editBtn, delBtn);
+    const mkBtn = (icon, key, cls, onClick) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn ' + cls;
+      b.title = MapleI18n.t(key);
+      b.setAttribute('aria-label', `${MapleI18n.t(key)} ${who}`);
+      b.innerHTML = MapleIcons.markup(icon, { size: 15 }) +
+        `<span class="btn-label">${MapleI18n.t(key)}</span>`;
+      b.addEventListener('click', onClick);
+      return b;
+    };
+    actions.append(
+      mkBtn('reset', 'card.reset', 'btn-kill', () => handlers.onKill(record.id)),
+      mkBtn('copy', 'card.copy', 'btn-icon', () => handlers.onCopy(record.id)),
+      mkBtn('pencil', 'card.edit', 'btn-icon', () => handlers.onEdit(record.id)),
+      mkBtn('trash', 'card.delete', 'btn-icon btn-danger', () => handlers.onDelete(record.id)),
+    );
     card.appendChild(actions);
-
-    // 底部進度條（取代原本的環）
-    const progress = document.createElement('div');
-    progress.className = 'card-progress';
-    progress.innerHTML = '<span class="card-progress-fill"></span>';
-    card.appendChild(progress);
 
     this.updateCard(card, record, state);
     return card;
@@ -206,13 +247,13 @@ const Render = {
     card.classList.toggle('is-overdue-long', !!state.overdueLong);
 
     const ring = card.querySelector('.ring-progress');
-    if (ring) ring.style.strokeDashoffset = String(RING_C * (1 - state.progress));
-    const fill = card.querySelector('.card-progress-fill');
-    if (fill) fill.style.width = (state.progress * 100) + '%';
+    if (ring) ring.style.strokeDashoffset = String(GAUGE_LEN * (1 - state.progress));
+    const pct = card.querySelector('.card-pct');
+    if (pct) pct.textContent = Math.round(state.progress * 100) + '%';
 
     // 時間到了直接顯示負數，不再另外顯示文字
     const countdown = card.querySelector('.card-countdown');
-    countdown.textContent = state.ready
+    if (countdown) countdown.textContent = state.ready
       ? '-' + MapleTimer.formatDuration(state.overdue)
       : MapleTimer.formatDuration(state.remaining);
   },

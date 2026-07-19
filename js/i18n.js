@@ -53,6 +53,11 @@ const STRINGS = {
     zh: "輸入頻道數字，例如 3",
     en: "Enter a channel number, e.g. 3",
   },
+  "field.persist": { zh: "記錄到此瀏覽器", en: "Save to this browser" },
+  "persist.sub": {
+    zh: "關閉則僅本次瀏覽有效，重新整理後消失",
+    en: "Off: only for this session, gone after refresh",
+  },
   "field.interval": { zh: "重生間隔", en: "Respawn interval" },
   "interval.sub": { zh: "需大於 0", en: "must be > 0" },
   "interval.hours": { zh: "小時", en: "Hours" },
@@ -72,6 +77,7 @@ const STRINGS = {
     en: "Respawn interval must be greater than 0.",
   },
 
+  "card.remaining": { zh: "剩餘時間", en: "Time left" },
   "card.reset": { zh: "重置", en: "Reset" },
   "card.copy": { zh: "複製", en: "Copy" },
   "card.edit": { zh: "編輯", en: "Edit" },
@@ -86,6 +92,10 @@ const STRINGS = {
   },
 
   "filter.all": { zh: "全部", en: "All" },
+  "filter.scrollHint": {
+    zh: "標籤過多，可用滾輪左右滾動",
+    en: "More tags — scroll horizontally with the wheel",
+  },
   "toast.undo": { zh: "復原", en: "Undo" },
   "toast.deleted": { zh: "已刪除「{who}」", en: "Deleted “{who}”" },
   "toast.cleared": {
@@ -109,13 +119,41 @@ const STRINGS = {
     en: "Sound: off (click to unmute)",
   },
   "theme.dark": {
-    zh: "深色模式（點擊切換為淺色）",
-    en: "Dark mode (click for light)",
+    zh: "深色模式（點擊切換主題）",
+    en: "Dark mode (click to switch theme)",
   },
   "theme.light": {
-    zh: "淺色模式（點擊切換為深色）",
-    en: "Light mode (click for dark)",
+    zh: "大地模式（點擊切換主題）",
+    en: "Earth mode (click to switch theme)",
   },
+  "theme.starry": {
+    zh: "星空模式（點擊切換主題）",
+    en: "Starry mode (click to switch theme)",
+  },
+  "theme.sakura": {
+    zh: "櫻緋模式（點擊切換主題）",
+    en: "Sakura mode (click to switch theme)",
+  },
+  "theme.slate": {
+    zh: "霧藍模式（點擊切換主題）",
+    en: "Slate mode (click to switch theme)",
+  },
+  "theme.matcha": {
+    zh: "抹茶模式（點擊切換主題）",
+    en: "Matcha mode (click to switch theme)",
+  },
+  "theme.lavender": {
+    zh: "薰衣模式（點擊切換主題）",
+    en: "Lavender mode (click to switch theme)",
+  },
+  "theme.dark.name": { zh: "深色", en: "Dark" },
+  "theme.light.name": { zh: "大地", en: "Earth" },
+  "theme.starry.name": { zh: "星空", en: "Starry" },
+  "theme.sakura.name": { zh: "櫻緋", en: "Sakura" },
+  "theme.slate.name": { zh: "霧藍", en: "Slate" },
+  "theme.matcha.name": { zh: "抹茶", en: "Matcha" },
+  "theme.lavender.name": { zh: "薰衣", en: "Lavender" },
+  "theme.pick": { zh: "選擇主題", en: "Choose theme" },
 };
 
 const MapleI18n = {
